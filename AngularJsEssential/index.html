@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html ng-app="parking">
+	<head>
+		<title>Angular JS</title>
+		<meta http-equiv="content-type" content="text/html;charset=utf-8" /> 
+		<script src="js/lib/angular.js"></script>
+		<script src="js/lib/angular-animate.js"></script>
+
+		<script>
+			// module
+			var parking = angular.module("parking",["ngAnimate"]);
+			
+			// controller
+			parking.controller("parkingCtrl", function($scope){
+				$scope.appTitle = "[Packt] Parking";
+
+				$scope.showAlert = true;
+				$scope.alertTopic = "Somthing went wrong!";
+				//$scope.alertMessage = "You must inform the plate and the color of the car!";
+				$scope.closeAlert = function(){
+					$scope.showAlert = false;
+				};
+
+				$scope.cars = [];
+				$scope.colors = ["White", "Black", "Blue", "Red", "Silver"];
+				$scope.park = function(car){
+					car.entrance = new Date();
+					$scope.cars.push(car);
+					delete $scope.car;
+				}
+				
+			});
+			
+			// directive
+			parking.directive("alert", function(){
+				return {
+					templateUrl: "directive-tmp/alert.html",
+					replace: true,
+					restrict: "E",
+					transclude: true,
+					scope: {
+						topic: "=topic",
+						//description: "=description",
+						close: "&close"
+					}
+				};
+			});
+
+			parking.directive("accordion", function(){
+				return {
+					template: "<div ng-transclude></div>",
+					restrict: "E",
+					transclude: true,
+					controller: function($scope, $element, $attrs, $transclude){
+						var accordionItems = [];
+						var addAccordionItem = function(accordionScope){
+							accordionItems.push(accordionScope);
+						};
+
+						var closeAll = function(){
+							angular.forEach(accordionItems, function(accordionScope){
+								accordionScope.active = false;
+							});
+						}
+
+						return {
+							addAccordionItem: addAccordionItem,
+							closeAll: closeAll
+						};
+					}
+				};
+			});
+
+			parking.directive("accordionItem", function(){
+				return {
+					templateUrl: "directive-tmp/accordionItem.html",
+					restrict: "E",
+					transclude: true,
+					scope: {
+						title: "@"
+					},
+					link: function(scope, element, attrs, ctrl, transcludeFn){
+
+						ctrl.addAccordionItem(scope);
+
+						element.bind("click", function(){
+							ctrl.closeAll();
+
+							scope.$apply(function(){
+								scope.active = !scope.active;
+							});
+						});
+					},
+					require:"^accordion"
+				};
+			});
+
+		</script>
+		
+		 <style>      
+			.selected {        
+				background-color: #FAFAD2;      
+			}    
+			.accordion-item{
+				border: 1px solid #d4d4d4;
+				border-radius: 2px;
+				padding: 5px;
+				margin: 5px 0;
+			}
+		 </style> 
+	</head>
+	<body ng-controller="parkingCtrl">
+		<h3 ng-bind="appTitle"></h3>    
+		<table>      
+			<thead>        
+				<tr>          
+					<th></th>          
+					<th>Plate</th>          
+					<th>Color</th>          
+					<th>Entrance</th>        
+				</tr>      
+			</thead>      
+			<tbody>        
+				<tr ng-class="{selected: car.selected}" ng-repeat="car in cars">          
+					<td><input type="checkbox" ng-model="car.selected"/></td>          
+					<td><span ng-bind="car.plate"></span></td>          
+					<td><span ng-bind="car.color"></span></td>
+					<td><span ng-bind="car.entrance"></span></td>        
+				</tr>      
+			</tbody>    
+		</table>
+		
+		<alert ng-show="showAlert" topic="alertTopic" close="closeAlert()">
+			You must inform the plate and the color of the car !
+		</alert>
+
+		<input type="text" ng-model="car.plate" placeholder="What's the plate?"/>    
+		<select ng-model="car.color" ng-options="color for color in colors">Pick a color</select>    
+		<button ng-click="park(car)" ng-disabled="!car.plate || !car.color">Park</button>
+
+
+		<accordion>
+			<accordion-item title="MMM-8790">  
+				White - 10/10/2002 10:00 
+			</accordion-item> 
+			<accordion-item title="ABC-9954">  
+				Black - 10/10/2002 10:36 
+			</accordion-item>
+			<accordion-item title="XYZ-9768">  
+				Blue - 10/10/2002 11:10 
+			</accordion-item>
+		</accordion>
+	</body>
+</html>
