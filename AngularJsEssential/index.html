@@ -5,13 +5,21 @@
 		<meta http-equiv="content-type" content="text/html;charset=utf-8" /> 
 		<script src="js/lib/angular.js"></script>
 		<script src="js/lib/angular-animate.js"></script>
+		<script src="js/lib/angular-route.js"></script>
 
 		<script>
 			// module
-			var parking = angular.module("parking",["ngAnimate"]);
+			var parking = angular.module("parking",["ngAnimate", "ngRoute"]);
+
+			parking.constant("parkingConfig", {
+				parkingRate: 10
+			});
 			
 			// controller
-			parking.controller("parkingCtrl", function($scope){
+			// $routeParams for getting parameters from URL
+			// parkingService: custom service
+			// $http: built in service for connecting to BE
+			parking.controller("parkingCtrl", function($scope, $routeParams, parkingService, $http){
 				$scope.appTitle = "[Packt] Parking";
 
 				$scope.showAlert = true;
@@ -23,12 +31,34 @@
 
 				$scope.cars = [];
 				$scope.colors = ["White", "Black", "Blue", "Red", "Silver"];
+
 				$scope.park = function(car){
 					car.entrance = new Date();
 					$scope.cars.push(car);
 					delete $scope.car;
 				}
+
+				$scope.calculateTicket = function(car){
+					$scope.ticket = parkingService.calculateTicket(car);
+				}
 				
+
+				// get list cars from BE
+				var retrieveCars = function(){
+					$http.get("/cars")
+					.success(function(data, status, headers, config){
+					})
+					.error(function(data, status, headers, config){
+
+					});
+				};
+
+				// post data of cars to BE
+				$scope.parkCar = function(car){
+					$http.post("/cars", car)
+					.success(function(data, status, headers, config){})
+					.error(function(data, status, headers, config){});
+				};
 			});
 			
 			// directive
@@ -95,6 +125,86 @@
 				};
 			});
 
+			// service
+			// -- create service by factory
+			parking.factory("parkingService", function(parkingConfig){
+				var _calculateTicket = function(car){
+					var departHour = new Date().getHours();
+					var entranceHour = car.entrance.getHours();
+					var parkingPeriod = departHour - entranceHour;
+					var parkingPrice = parkingPeriod * parkingConfig.parkingRate;
+					return {
+						period: parkingPeriod,
+						price: parkingPrice
+					};
+				};
+
+				return {
+					calculateTicket: _calculateTicket
+				};
+			});
+
+			// -- create service by service
+			parking.service("parkingServiceService", function(parkingConfig){
+				this.calculateTicket = function(car){
+					var departHour = new Date().getHours();
+					var entranceHour = car.entrance.getHours();
+					var parkingPeriod = departHour - entranceHour;
+					var parkingPrice = parkingPeriod * parkingConfig.parkingRate;
+					return {
+						period: parkingPeriod,
+						price: parkingPrice
+					};
+				};
+			});
+
+			// -- create service by provider
+			parking.provider("parkingServiceProvider", function(parkingConfig){
+				var _parkingRate = parkingConfig.parkingRate;
+
+				var _calculateTicket = function(car){
+					var departHour = new Date().getHours();
+					var entranceHour = car.entrance.getHours();
+					var parkingPeriod = departHour - entranceHour;
+					var parkingPrice = parkingPeriod * _parkingRate;
+					return {
+						period: parkingPeriod,
+						price: parkingPrice
+					};
+				};
+
+				this.setParkingRate = function(rate){
+					_parkingRate = rate;
+				};
+
+				this.$get = function(){
+					return {
+						calculateTicket: _calculateTicket
+					};
+				};
+			});
+
+			// config for provider
+			parking.config(function(parkingServiceProvider){
+				//parkingServiceProvider.setParkingRate(10); - not working
+				console.log(parkingServiceProvider);
+			});
+
+			// routes
+			parking.config(function($routeProvider){
+				$routeProvider
+				.when("/parking", {
+					templateUrl: 'view/parking.html',
+					controller: 'parkingCtrl'
+				})
+				.when("/car/:id", {
+					templateUrl: 'car.html',
+					controller: 'carCtrl'
+				})
+				.otherwise({
+					redirectTo: '/parking'
+				});
+			});
 		</script>
 		
 		 <style>      
@@ -109,71 +219,7 @@
 			}
 		 </style> 
 	</head>
-	<body ng-controller="parkingCtrl">
-		<h3 ng-bind="appTitle"></h3>    
-		<table>      
-			<thead>        
-				<tr>          
-					<th></th>          
-					<th>Plate</th>          
-					<th>Color</th>          
-					<th>Entrance</th>        
-				</tr>      
-			</thead>      
-			<tbody>        
-				<tr ng-class="{selected: car.selected}" ng-repeat="car in cars">          
-					<td><input type="checkbox" ng-model="car.selected"/></td>          
-					<td><span ng-bind="car.plate"></span></td>          
-					<td><span ng-bind="car.color"></span></td>
-					<td><span ng-bind="car.entrance"></span></td>        
-				</tr>      
-			</tbody>    
-		</table>
-		
-		<!--
-		<alert ng-show="showAlert" topic="alertTopic" close="closeAlert()">
-			You must inform the plate and the color of the car !
-		</alert>-->
-
-		<input type="text" ng-model="car.plate" placeholder="What's the plate?"/>    
-		<select ng-model="car.color" ng-options="color for color in colors">Pick a color</select>    
-		<button ng-click="park(car)" ng-disabled="!car.plate || !car.color">Park</button>
-
-
-		<accordion>
-			<accordion-item title="MMM-8790">  
-				White - 10/10/2002 10:00 
-			</accordion-item> 
-			<accordion-item title="ABC-9954">  
-				Black - 10/10/2002 10:36 
-			</accordion-item>
-			<accordion-item title="XYZ-9768">  
-				Blue - 10/10/2002 11:10 
-			</accordion-item>
-		</accordion>
-
-		<div>--- Form example ---</div>
-		<form name="carForm">
-			<alert
-				ng-show="carForm.plateField.$invalid"
-				topic="Something went wrong">
-				The plate is invalid!
-			</alert>
-
-			<input 
-				type="text" 
-				name="plateField" 
-				ng-model="car.plate" 
-				placeholder="What's the plate?"
-				ng-minlength="6"
-				ng-maxlength="10"
-				ng-pattern="/[A-Z]{3}[0-9]{3,7}/"
-				/>
-			<button
-				ng-click="park(car)"
-				ng-disabled="carForm.$invalid"
-			>Park</button>
-		</form>
-
+	<body >
+		<div ng-view></div>
 	</body>
 </html>
