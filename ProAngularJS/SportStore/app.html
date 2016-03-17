@@ -7,13 +7,37 @@
 	<script src="../libraries/angular.js"></script>
 
 	<script>
-		angular.module("sportStore", ["customFilters", "cart"]);
+		angular.module("sportStore", ["customFilters", "cart", "ngRoute"])
+		.config(function($routeProvider){
+			
+			$routeProvider.when("/complete", {
+				templateUrl: "./views/thankYou.html"
+			});
+
+			$routeProvider.when("/placeorder", {
+				templateUrl: "./views/placeOrder.html"
+			});
+
+			$routeProvider.when("/checkout", {
+				templateUrl: "./views/checkoutSummary.html"
+			});
+
+			$routeProvider.when("/products", {
+				templateUrl: "./views/productList.html"
+			});
+
+			$routeProvider.otherwise({
+				templateUrl: "./views/productList.html"
+			});
+		});
 	</script>
 
 	<script src="controllers/sportStore.js"></script>
 	<script src="filters/customFilters.js"></script>
 	<script src="controllers/productListController.js"></script>
 	<script src="components/cart/cart.js"></script>
+	<script src="ngmodules/angular-route.js"></script>
+	<script src="controllers/checkoutController.js"></script>
 </head>
 <body data-ng-controller="sportStoreCtrl">
 	<div class="navbar navbar-inverse">
@@ -26,6 +50,6 @@
 		<a href="./app.html" class="alert-link">Click here to try again.</a>
 	</div>
 
-	<ng-include src="'views/productList.html'"></ng-include>
+	<ng-view />
 </body>
 </html>
